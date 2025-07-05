@@ -11,6 +11,11 @@ const app = express();
 // Enable CORS
 app.use(cors());
 
+app.use(cors({
+  origin: "*", // Or restrict to just your frontend: "https://cryptocurrency.makemysports.in"
+  methods: ["POST", "GET"],
+}));
+
 // For parsing JSON requests
 app.use(express.json());
 

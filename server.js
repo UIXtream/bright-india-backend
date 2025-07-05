@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const authRoutes = require("./routes/auth"); // Your current file
+const authRoutes = require("./routes/auth");
 
 dotenv.config();
 
@@ -14,8 +14,13 @@ app.use(cors());
 // For parsing JSON requests
 app.use(express.json());
 
-// Serve uploaded profile images statically
+// Static file serving for profile images
 app.use("/uploads", express.static("uploads"));
+
+// ✅ Add root route for health check
+app.get("/", (req, res) => {
+  res.send("✅ Bright India API is running");
+});
 
 // Auth Routes
 app.use("/api/auth", authRoutes);
@@ -27,7 +32,13 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(() => {
   console.log("✅ MongoDB connected");
-  app.listen(5000, () => console.log("🚀 Server running at http://localhost:5000"));
+
+  // ✅ Use dynamic port for Render
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+
 })
 .catch(err => {
   console.error("❌ MongoDB connection error:", err);

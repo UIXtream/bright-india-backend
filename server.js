@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const helmet = require("helmet");
 const authRoutes = require("./routes/auth");
 
 dotenv.config();
@@ -15,6 +16,9 @@ app.use(cors({
   origin: "*", // Or restrict to just your frontend: "https://cryptocurrency.makemysports.in"
   methods: ["POST", "GET"],
 }));
+
+
+app.use(helmet());
 
 // For parsing JSON requests
 app.use(express.json());

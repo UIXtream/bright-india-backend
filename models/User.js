@@ -11,17 +11,13 @@
 
 // models/User.js
 const mongoose = require("mongoose");
-
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
   password: String,
   profilePic: String,
-  referredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  }
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 }, { timestamps: true });
+
 
 module.exports = mongoose.model("User", userSchema);

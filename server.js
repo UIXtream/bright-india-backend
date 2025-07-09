@@ -10,7 +10,11 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: ["https://your-frontend-url.com", "http://localhost:5500"], // ✅ add deployed frontend URL here
+  origin: [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "https://brightindia.co"
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 }));

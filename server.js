@@ -3,52 +3,43 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
-const authRoutes = require("./routes/auth");
+const path = require("path");
 
 dotenv.config();
 
 const app = express();
 
-// Enable CORS
-app.use(cors());
-
 app.use(cors({
-  origin: "*", // Or restrict to just your frontend: "https://cryptocurrency.makemysports.in"
-  methods: ["POST", "GET"],
+  origin: ["https://your-frontend-url.com", "http://localhost:5500"], // ✅ add deployed frontend URL here
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
 }));
-
-
 app.use(helmet());
-
-// For parsing JSON requests
 app.use(express.json());
 
-// Static file serving for profile images
-app.use("/uploads", express.static("uploads"));
+// ✅ Serve images
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // ✅ Use __dirname for Render
 
-// ✅ Add root route for health check
+// Health check
 app.get("/", (req, res) => {
-  res.send("✅ Bright India API is running");
+  res.send("✅ Bright India API is running on Render!");
 });
 
-// Auth Routes
+// Routes
+const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
 
-// MongoDB connection
+// MongoDB connect
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
+  useUnifiedTopology: true
+}).then(() => {
   console.log("✅ MongoDB connected");
 
-  // ✅ Use dynamic port for Render
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🚀 Server is running on port ${PORT}`);
   });
-
-})
-.catch(err => {
-  console.error("❌ MongoDB connection error:", err);
+}).catch(err => {
+  console.error("❌ MongoDB connection failed:", err);
 });

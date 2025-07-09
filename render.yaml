@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: bright-india-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: MONGO_URI
+        value: YOUR_MONGODB_URI
+      - key: JWT_SECRET
+        value: YOUR_SECRET_KEY
+    autoDeploy: true

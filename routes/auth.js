@@ -6,26 +6,46 @@ const fs = require("fs");
 const multer = require("multer");
 const User = require("../models/User");
 const verifyToken = require("../utils/authMiddleware");
-
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const router = express.Router();
 
-// ✅ Multer setup for saving files to /uploads/profilePics
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const dir = "uploads/profilePics";
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const uniqueName = "profile-" + Date.now() + ext;
-    cb(null, uniqueName);
-  },
+
+
+// // ✅ Multer setup for saving files to /uploads/profilePics
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     const dir = "uploads/profilePics";
+//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+//     cb(null, dir);
+//   },
+//   filename: function (req, file, cb) {
+//     const ext = path.extname(file.originalname);
+//     const uniqueName = "profile-" + Date.now() + ext;
+//     cb(null, uniqueName);
+//   },
+// });
+// const upload = multer({ storage });
+
+// 🔐 Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// 📦 Use Cloudinary storage with Multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "brightindia_profiles",   // optional: folder name in cloudinary
+    allowed_formats: ["jpg", "jpeg", "png"],
+    transformation: [{ width: 500, height: 500, crop: "limit" }]
+  }
 });
 const upload = multer({ storage });
 
 // ✅ Signup
-// backend/routes/auth.js
 router.post("/signup", upload.single("profilePic"), async (req, res) => {
   try {
     const { name, email, password, referredBy } = req.body;
@@ -36,13 +56,13 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const profilePicName = req.file ? req.file.filename : "";
+    const profilePicUrl = req.file ? req.file.path : ""; // ✅ Cloudinary gives full URL
 
     const user = new User({
       name,
       email,
       password: hashedPassword,
-      profilePic: profilePicName,
+      profilePic: profilePicUrl, // ✅ Save full URL
       referredBy: referredBy || null
     });
 
@@ -54,6 +74,8 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+
 // my team
 router.get("/team", verifyToken, async (req, res) => {
   try {

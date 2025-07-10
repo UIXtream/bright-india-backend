@@ -199,22 +199,22 @@ router.get("/level-income", verifyToken, async (req, res) => {
 
 // POST /api/auth/fake-income
 router.post("/fake-income", verifyToken, async (req, res) => {
+  const { userId, income } = req.body;
+
   try {
-    const { userId, income } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    if (!userId || !income) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
+    user.income.trading += income.trading || 0;
+    user.income.direct += income.direct || 0;
+    user.income.level += income.level || 0;
+    user.income.reward += income.reward || 0;
 
-    await User.findByIdAndUpdate(userId, {
-      $set: {
-        income
-      }
-    });
+    await user.save();
 
-    res.json({ success: true, message: "Fake income added successfully" });
+    res.json({ success: true, message: "Fake income added!" });
   } catch (err) {
-    console.error("Fake income error:", err);
+    console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

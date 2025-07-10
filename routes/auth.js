@@ -142,3 +142,15 @@ router.get("/user/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+// GET /api/auth/referrals/:referrerId
+router.get("/referrals/:referrerId", async (req, res) => {
+  const { referrerId } = req.params;
+  try {
+    const users = await User.find({ referredBy: referrerId });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Server Error" });
+  }
+});

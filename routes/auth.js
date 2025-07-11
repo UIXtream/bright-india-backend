@@ -197,24 +197,68 @@ router.get("/level-income", verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/auth/fake-income
-router.post("/fake-income", verifyToken, async (req, res) => {
-  const { userId, income } = req.body;
+
+
+// DAILY INCOME ROUTE
+router.post("/distribute-daily-income", async (req, res) => {
+  try {
+    const users = await User.find({ deposit: { $gt: 0 } });
+
+    for (const user of users) {
+      const dailyIncome = user.deposit * 0.004; // 0.4%
+      user.income.trading += dailyIncome;
+      await user.save();
+    }
+
+    res.json({ success: true, message: "Daily trading income distributed." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Error in daily income." });
+  }
+});
+
+// deposit in refererr income
+router.post("/deposit", verifyToken, async (req, res) => {
+  const userId = req.user.id;
+  const { amount } = req.body; // e.g., 1000
 
   try {
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    user.income.trading += income.trading || 0;
-    user.income.direct += income.direct || 0;
-    user.income.level += income.level || 0;
-    user.income.reward += income.reward || 0;
-
+    // ⬆️ Add to user's total deposit
+    user.deposit += amount;
     await user.save();
 
-    res.json({ success: true, message: "Fake income added!" });
+    // ✅ 1. Give 1% to Direct Referrer
+    if (user.referredBy) {
+      const referrer = await User.findById(user.referredBy);
+      if (referrer) {
+        const directBonus = amount * 0.01;
+        referrer.income.direct += directBonus;
+        await referrer.save();
+      }
+    }
+
+    // ✅ 2. LEVEL INCOME: Loop 5 levels up
+    let currentRef = user.referredBy;
+    const levelPercent = { 1: 1, 2: 1, 3: 0.5, 4: 0.5, 5: 0.25 };
+
+    for (let level = 1; level <= 5 && currentRef; level++) {
+      const ref = await User.findById(currentRef);
+      if (ref) {
+        const levelBonus = amount * (levelPercent[level] / 100);
+        ref.income.level += levelBonus;
+        await ref.save();
+        currentRef = ref.referredBy;
+      } else {
+        break;
+      }
+    }
+
+    res.json({ success: true, message: "Deposit and referral incomes processed." });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Deposit error:", err);
+    res.status(500).json({ success: false, message: "Deposit failed." });
   }
 });

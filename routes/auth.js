@@ -140,27 +140,28 @@ router.get("/referrals/:referrerId", async (req, res) => {
 router.get("/level-income", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-
     const levels = [];
     let currentLevelUsers = [userId];
 
-    // Level-wise percentage
     const levelPercentages = {
-      1: 1, // 1%
-      2: 1, // 1%
-      3: 0.5, // 0.5%
-      4: 0.5, // 0.5%
-      5: 0.25, // 0.25%
+      1: 1,
+      2: 1,
+      3: 0.5,
+      4: 0.5,
+      5: 0.25,
     };
 
     for (let level = 1; level <= 5; level++) {
-      // Sab users jo current level wale users se refer huye hain
+      // Get all referred users at this level
       const users = await User.find({
         referredBy: { $in: currentLevelUsers },
       }).select("name email referredBy _id");
 
-      // Sab referred users ka deposit nikalna
+      if (users.length === 0) break;
+
       const depositMap = {};
+      const usersWithDeposit = [];
+
       for (const user of users) {
         const deposits = await Deposit.find({
           userId: user._id,
@@ -168,16 +169,22 @@ router.get("/level-income", verifyToken, async (req, res) => {
         });
 
         const totalDeposit = deposits.reduce((sum, d) => sum + d.amount, 0);
-        depositMap[user._id] = totalDeposit;
+        if (totalDeposit > 0) {
+          depositMap[user._id] = totalDeposit;
+          usersWithDeposit.push(user);
+        }
       }
 
-      // Referred by user ka naam nikalna
-      const populatedUsers = await User.populate(users, {
+      // Only move to next level with all current users (whether deposit or not)
+      currentLevelUsers = users.map((u) => u._id);
+
+      if (usersWithDeposit.length === 0) continue;
+
+      const populatedUsers = await User.populate(usersWithDeposit, {
         path: "referredBy",
         select: "name",
       });
 
-      // Final level data generate
       const levelData = populatedUsers.map((user) => {
         const percent = levelPercentages[level];
         const depositAmount = depositMap[user._id] || 0;
@@ -193,9 +200,6 @@ router.get("/level-income", verifyToken, async (req, res) => {
       });
 
       levels.push(...levelData);
-
-      // Prepare for next level loop
-      currentLevelUsers = users.map((u) => u._id);
     }
 
     res.json({ success: true, data: levels });

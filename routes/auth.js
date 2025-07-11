@@ -9,39 +9,21 @@ const verifyToken = require("../utils/authMiddleware");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const router = express.Router();
-
-
-
-// // ✅ Multer setup for saving files to /uploads/profilePics
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     const dir = "uploads/profilePics";
-//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-//     cb(null, dir);
-//   },
-//   filename: function (req, file, cb) {
-//     const ext = path.extname(file.originalname);
-//     const uniqueName = "profile-" + Date.now() + ext;
-//     cb(null, uniqueName);
-//   },
-// });
-// const upload = multer({ storage });
-
-// 🔐 Cloudinary config
+const Deposit = require("../models/Deposit");
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // 📦 Use Cloudinary storage with Multer
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "brightindia_profiles",   // optional: folder name in cloudinary
+    folder: "brightindia_profiles", // optional: folder name in cloudinary
     allowed_formats: ["jpg", "jpeg", "png"],
-    transformation: [{ width: 500, height: 500, crop: "limit" }]
-  }
+    transformation: [{ width: 500, height: 500, crop: "limit" }],
+  },
 });
 const upload = multer({ storage });
 
@@ -52,7 +34,9 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
 
     const userExist = await User.findOne({ email });
     if (userExist) {
-      return res.status(400).json({ success: false, message: "Email already registered." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -63,7 +47,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
       email,
       password: hashedPassword,
       profilePic: profilePicUrl, // ✅ Save full URL
-      referredBy: referredBy || null
+      referredBy: referredBy || null,
     });
 
     await user.save();
@@ -75,11 +59,12 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
   }
 });
 
-
 // my team
 router.get("/team", verifyToken, async (req, res) => {
   try {
-    const team = await User.find({ referredBy: req.user.id }).select("name email createdAt");
+    const team = await User.find({ referredBy: req.user.id }).select(
+      "name email createdAt"
+    );
     res.status(200).json({ team });
   } catch (err) {
     res.status(500).json({ message: "Failed to load team members" });
@@ -99,17 +84,15 @@ router.post("/login", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid email or password." });
 
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     res.status(200).json({
       message: "Login successful.",
       token,
       profilePic: user.profilePic,
-      name: user.name
+      name: user.name,
     });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -132,7 +115,7 @@ router.get("/test", (req, res) => {
 });
 
 module.exports = router;
-// for take referel name and id 
+// for take referel name and id
 router.get("/user/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("name _id");
@@ -142,7 +125,6 @@ router.get("/user/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 // GET /api/auth/referrals/:referrerId
 router.get("/referrals/:referrerId", async (req, res) => {
@@ -154,50 +136,77 @@ router.get("/referrals/:referrerId", async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
-
-
-// GET /api/auth/level-income
+// 🧠 Dynamic Level Income Route - 5 levels
 router.get("/level-income", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
     const levels = [];
     let currentLevelUsers = [userId];
+
+    // Level-wise percentage
     const levelPercentages = {
-      1: 1,
-      2: 1,
-      3: 0.5,
-      4: 0.5,
-      5: 0.25
+      1: 1, // 1%
+      2: 1, // 1%
+      3: 0.5, // 0.5%
+      4: 0.5, // 0.5%
+      5: 0.25, // 0.25%
     };
 
     for (let level = 1; level <= 5; level++) {
-      const users = await User.find({ referredBy: { $in: currentLevelUsers } }).select("name email referredBy");
-      const populatedUsers = await User.populate(users, { path: "referredBy", select: "name" });
+      // Sab users jo current level wale users se refer huye hain
+      const users = await User.find({
+        referredBy: { $in: currentLevelUsers },
+      }).select("name email referredBy _id");
 
-      const levelData = populatedUsers.map(user => ({
-        level,
-        name: user.name,
-        referredBy: user.referredBy ? user.referredBy.name : "N/A",
-        percentage: levelPercentages[level],
-        earnedFrom: Math.floor(Math.random() * 9000) + 1000 // You can replace this with real transaction logic
-      }));
+      // Sab referred users ka deposit nikalna
+      const depositMap = {};
+      for (const user of users) {
+        const deposits = await Deposit.find({
+          userId: user._id,
+          status: "Approved",
+        });
+
+        const totalDeposit = deposits.reduce((sum, d) => sum + d.amount, 0);
+        depositMap[user._id] = totalDeposit;
+      }
+
+      // Referred by user ka naam nikalna
+      const populatedUsers = await User.populate(users, {
+        path: "referredBy",
+        select: "name",
+      });
+
+      // Final level data generate
+      const levelData = populatedUsers.map((user) => {
+        const percent = levelPercentages[level];
+        const depositAmount = depositMap[user._id] || 0;
+        const earned = (depositAmount * percent) / 100;
+
+        return {
+          level,
+          name: user.name,
+          referredBy: user.referredBy ? user.referredBy.name : "N/A",
+          percentage: percent,
+          earnedFrom: earned.toFixed(2),
+        };
+      });
 
       levels.push(...levelData);
 
-      // Prepare for next level
-      currentLevelUsers = users.map(u => u._id);
+      // Prepare for next level loop
+      currentLevelUsers = users.map((u) => u._id);
     }
 
     res.json({ success: true, data: levels });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error while calculating level income" });
+    console.error("Level Income Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while calculating level income",
+    });
   }
 });
-
-
 
 // DAILY INCOME ROUTE
 router.post("/distribute-daily-income", async (req, res) => {
@@ -217,46 +226,52 @@ router.post("/distribute-daily-income", async (req, res) => {
   }
 });
 
-// deposit in refererr income
+// deposit income.....
+
 router.post("/deposit", verifyToken, async (req, res) => {
   const userId = req.user.id;
-  const { amount } = req.body; // e.g., 1000
+  const { amount } = req.body;
 
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // ⬆️ Add to user's total deposit
     user.deposit += amount;
     await user.save();
 
-    // ✅ 1. Give 1% to Direct Referrer
-    if (user.referredBy) {
-      const referrer = await User.findById(user.referredBy);
-      if (referrer) {
-        const directBonus = amount * 0.01;
-        referrer.income.direct += directBonus;
-        await referrer.save();
-      }
-    }
+    // ✅ Save deposit history
+    await Deposit.create({
+      userId,
+      amount,
+      status: "Approved",
+    });
 
-    // ✅ 2. LEVEL INCOME: Loop 5 levels up
+    // ✅ Level Income Logic
     let currentRef = user.referredBy;
     const levelPercent = { 1: 1, 2: 1, 3: 0.5, 4: 0.5, 5: 0.25 };
 
     for (let level = 1; level <= 5 && currentRef; level++) {
       const ref = await User.findById(currentRef);
       if (ref) {
-        const levelBonus = amount * (levelPercent[level] / 100);
-        ref.income.level += levelBonus;
+        const incomeAmount = (amount * levelPercent[level]) / 100;
+
+        // ✅ Direct Income (level 1)
+        if (level === 1) {
+          ref.income.direct += incomeAmount;
+        } else {
+          // ✅ Team income = level income for level 2-5
+          ref.income.level += incomeAmount;
+        }
+
         await ref.save();
         currentRef = ref.referredBy;
-      } else {
-        break;
-      }
+      } else break;
     }
 
-    res.json({ success: true, message: "Deposit and referral incomes processed." });
+    res.json({
+      success: true,
+      message: "Deposit processed and incomes distributed.",
+    });
   } catch (err) {
     console.error("Deposit error:", err);
     res.status(500).json({ success: false, message: "Deposit failed." });

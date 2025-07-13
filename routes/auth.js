@@ -152,7 +152,18 @@ router.get("/level-income", verifyToken, async (req, res) => {
     };
 
     for (let level = 1; level <= 5; level++) {
-      // Get all referred users at this level
+      // ❌ SKIP LEVEL 1
+      if (level === 1) {
+        // Level 1 users ko next level ke liye prepare karo
+        const users = await User.find({
+          referredBy: { $in: currentLevelUsers },
+        }).select("_id");
+
+        currentLevelUsers = users.map((u) => u._id);
+        continue; // Skip to level 2
+      }
+
+      // ✅ Your existing logic remains for level 2 to 5
       const users = await User.find({
         referredBy: { $in: currentLevelUsers },
       }).select("name email referredBy _id");
@@ -175,7 +186,6 @@ router.get("/level-income", verifyToken, async (req, res) => {
         }
       }
 
-      // Only move to next level with all current users (whether deposit or not)
       currentLevelUsers = users.map((u) => u._id);
 
       if (usersWithDeposit.length === 0) continue;
@@ -194,7 +204,7 @@ router.get("/level-income", verifyToken, async (req, res) => {
           level,
           name: user.name,
           referredBy: user.referredBy ? user.referredBy.name : "N/A",
-          deposit: depositAmount, // 🆕 Include deposit
+          deposit: depositAmount,
           percentage: percent,
           earnedFrom: earned.toFixed(2),
         };
@@ -311,11 +321,9 @@ router.get("/direct-income-details", verifyToken, async (req, res) => {
     res.json({ success: true, data: result });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to fetch direct income details",
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch direct income details",
+    });
   }
 });

@@ -6,6 +6,22 @@ const Deposit = require("../models/Deposit");
 const verifyToken = require("../utils/authMiddleware");
 
 
+// Admin profile route
+router.get("/me", verifyToken, async (req, res) => {
+    try {
+        const admin = req.user; // `verifyToken` middleware se milta hai
+        res.status(200).json({
+            success: true,
+            user: {
+                name: admin.name,
+                profilePic: admin.profilePic
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to fetch admin profile" });
+    }
+});
+
 // 📦 Admin Stats Route
 router.get("/stats", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {

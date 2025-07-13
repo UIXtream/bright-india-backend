@@ -93,37 +93,38 @@ router.get("/paymentproofs", async (req, res) => {
 // POST: Approve Payment Proof
 router.post("/approve-proof/:id", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
-    return res.status(403).json({ message: "Access denied" });
+    return res.status(403).json({ success: false, message: "Access denied" });
   }
-  try {
-    const proof = await PaymentProof.findById(req.params.id);
-    if (!proof)
-      return res
-        .status(404)
-        .json({ success: false, message: "Proof not found" });
 
+  try {
+    const proof = await PaymentProof.findById(req.params.id).populate("userId");
+    if (!proof) {
+      return res.status(404).json({ success: false, message: "Proof not found" });
+    }
+
+    if (proof.status === "Approved") {
+      return res.status(400).json({ success: false, message: "Already approved" });
+    }
+
+    // ✅ Update proof status
     proof.status = "Approved";
     await proof.save();
 
-    // Add deposit record
+    // ✅ Update user's deposit
+    const user = await User.findById(proof.userId._id);
+    user.deposit += Number(proof.amount);
+    await user.save();
+
+    // ✅ Optional: Save deposit record
     await Deposit.create({
-      userId: proof.userId,
+      userId: user._id,
       amount: proof.amount,
       status: "Approved",
     });
 
-    // Update user deposit
-    const user = await User.findById(proof.userId);
-    user.deposit += proof.amount;
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "Proof approved and deposit recorded.",
-    });
+    res.json({ success: true, message: "Proof approved and deposit updated" });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to approve." });
+    console.error("Approve Proof Error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
-module.exports = router;

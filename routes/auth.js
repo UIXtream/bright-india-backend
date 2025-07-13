@@ -281,3 +281,33 @@ router.post("/deposit", verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Deposit failed." });
   }
 });
+
+// 📁 routes/auth.js (ya jaha bhi auth-related routes hain)
+// for direct-income details
+router.get('/direct-income-details', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Example logic: find users directly referred by current user
+        const directReferrals = await User.find({ referredBy: userId });
+
+        const result = await Promise.all(directReferrals.map(async user => {
+            const teamCount = await User.countDocuments({ referredBy: user._id });
+            const deposit = user.deposit || 0;
+            const percentage = 10; // ya jaisa bhi logic hai
+
+            return {
+                name: user.name,
+                email: user.email,
+                deposit,
+                percentage,
+                teamCount,
+            };
+        }));
+
+        res.json({ success: true, data: result });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Failed to fetch direct income details" });
+    }
+});

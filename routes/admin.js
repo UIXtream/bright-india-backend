@@ -7,7 +7,7 @@ const verifyToken = require("../utils/authMiddleware");
 
 
 // 📦 Admin Stats Route
-router.get("/admin/stats", verifyToken, async (req, res) => {
+router.get("/stats", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ message: "Access denied" });
   }
@@ -47,7 +47,7 @@ router.get("/admin/stats", verifyToken, async (req, res) => {
 });
 
 // 📦 Admin User List
-router.get("/admin/users", verifyToken, async (req, res) => {
+router.get("/users", verifyToken, async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ message: "Access denied" });
   }

@@ -41,14 +41,18 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const profilePicUrl = req.file ? req.file.path : ""; // ✅ Cloudinary gives full URL
+    const profilePicUrl = req.file ? req.file.path : "";
+
+    // ✅ Role assign: Only 1 hardcoded admin
+    const role = (email === "naveenkumar123@gmail.com") ? "admin" : "user";
 
     const user = new User({
       name,
       email,
       password: hashedPassword,
-      profilePic: profilePicUrl, // ✅ Save full URL
+      profilePic: profilePicUrl,
       referredBy: referredBy || null,
+      role, // ✅ include role here
     });
 
     await user.save();
@@ -59,6 +63,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // my team
 router.get("/team", verifyToken, async (req, res) => {
@@ -73,6 +78,32 @@ router.get("/team", verifyToken, async (req, res) => {
 });
 
 // ✅ Login
+// router.post("/login", async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     const user = await User.findOne({ email });
+//     if (!user)
+//       return res.status(400).json({ message: "Invalid email or password." });
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch)
+//       return res.status(400).json({ message: "Invalid email or password." });
+
+//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+//       expiresIn: "1d",
+//     });
+
+//     res.status(200).json({
+//       message: "Login successful.",
+//       token,
+//       profilePic: user.profilePic,
+//       name: user.name,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -85,20 +116,24 @@ router.post("/login", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid email or password." });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
-    });
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, // ✅ role added in JWT
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
     res.status(200).json({
       message: "Login successful.",
       token,
       profilePic: user.profilePic,
       name: user.name,
+      role: user.role, // ✅ send role to frontend
     });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // ✅ Profile route
 router.get("/me", verifyToken, async (req, res) => {

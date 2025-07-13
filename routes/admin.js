@@ -7,20 +7,30 @@ const verifyToken = require("../utils/authMiddleware");
 
 
 // Admin profile route
+// ✅ Fixed: Admin profile route
 router.get("/me", verifyToken, async (req, res) => {
-    try {
-        const admin = req.user; // `verifyToken` middleware se milta hai
-        res.status(200).json({
-            success: true,
-            user: {
-                name: admin.name,
-                profilePic: admin.profilePic
-            }
-        });
-    } catch (err) {
-        res.status(500).json({ success: false, message: "Failed to fetch admin profile" });
+  try {
+    // 🔍 Ab poora admin object fetch kar rahe hain
+    const admin = await User.findById(req.user.id).select("name profilePic role");
+
+    // ✅ Check admin role
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        name: admin.name,
+        profilePic: admin.profilePic, // ✅ This will now show Cloudinary URL
+      },
+    });
+  } catch (err) {
+    console.error("Admin profile error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch admin profile" });
+  }
 });
+
 
 // 📦 Admin Stats Route
 router.get("/stats", verifyToken, async (req, res) => {

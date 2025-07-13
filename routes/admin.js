@@ -128,3 +128,6 @@ router.post("/approve-proof/:id", verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+
+module.exports = router;

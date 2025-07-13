@@ -212,7 +212,7 @@ router.get("/level-income", verifyToken, async (req, res) => {
   }
 });
 
-// DAILY INCOME ROUTE
+// deposit income daily
 router.post("/distribute-daily-income", async (req, res) => {
   try {
     const users = await User.find({ deposit: { $gt: 0 } });

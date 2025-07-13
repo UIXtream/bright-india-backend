@@ -4,11 +4,13 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const helmet = require("helmet");
 const path = require("path");
+const cron = require("node-cron");
+const axios = require("axios");
 
 dotenv.config();
-
 const app = express();
 
+// Middleware
 app.use(cors({
   origin: [
     "http://localhost:5500",
@@ -21,8 +23,8 @@ app.use(cors({
 app.use(helmet());
 app.use(express.json());
 
-// ✅ Serve images
-app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // ✅ Use __dirname for Render
+// Static uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Health check
 app.get("/", (req, res) => {
@@ -32,6 +34,16 @@ app.get("/", (req, res) => {
 // Routes
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
+
+// 🔁 Cron job for daily income
+cron.schedule("0 0 * * *", async () => {
+  try {
+    const res = await axios.post("http://localhost:5000/api/auth/distribute-daily-income");
+    console.log("✅ Cron Job: Daily Trading Income Distributed -", res.data.message);
+  } catch (err) {
+    console.error("❌ Cron Job Error:", err.message);
+  }
+});
 
 // MongoDB connect
 mongoose.connect(process.env.MONGO_URI, {

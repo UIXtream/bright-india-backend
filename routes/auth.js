@@ -10,6 +10,7 @@ const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const router = express.Router();
 const Deposit = require("../models/Deposit");
+const PaymentProof = require("../models/PaymentProof");
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -114,7 +115,6 @@ router.get("/test", (req, res) => {
   res.send("✅ Auth API working");
 });
 
-module.exports = router;
 // for take referel name and id
 router.get("/user/:id", async (req, res) => {
   try {
@@ -327,3 +327,34 @@ router.get("/direct-income-details", verifyToken, async (req, res) => {
     });
   }
 });
+
+
+// 📸 Upload Payment Proof
+router.post("/upload-proof", verifyToken, upload.single("screenshot"), async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Screenshot is required." });
+    }
+
+    const proof = new PaymentProof({
+      userId: req.user.id,
+      amount,
+      screenshotUrl: req.file.path,
+      status: "Pending",
+    });
+
+    await proof.save();
+
+    res.json({
+      success: true,
+      message: "Screenshot uploaded successfully.",
+      screenshotUrl: req.file.path,
+    });
+  } catch (err) {
+    console.error("Upload Proof Error:", err);
+    res.status(500).json({ success: false, message: "Failed to upload screenshot." });
+  }
+});
+module.exports = router;

@@ -29,6 +29,7 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 // ✅ Signup
+// ✅ Signup
 router.post("/signup", upload.single("profilePic"), async (req, res) => {
   try {
     const { name, email, password, referredBy } = req.body;
@@ -43,8 +44,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePicUrl = req.file ? req.file.path : "";
 
-    // ✅ Role assign: Only 1 hardcoded admin
-    const role = (email === "naveenkumar123@gmail.com") ? "admin" : "user";
+    const role = email === "naveenkumar123@gmail.com" ? "admin" : "user"; // ✅
 
     const user = new User({
       name,
@@ -52,7 +52,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
       password: hashedPassword,
       profilePic: profilePicUrl,
       referredBy: referredBy || null,
-      role, // ✅ include role here
+      role, // ✅ Add role here
     });
 
     await user.save();
@@ -63,7 +63,6 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 // my team
 router.get("/team", verifyToken, async (req, res) => {
@@ -133,7 +132,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 // ✅ Profile route
 router.get("/me", verifyToken, async (req, res) => {
@@ -363,33 +361,41 @@ router.get("/direct-income-details", verifyToken, async (req, res) => {
   }
 });
 
-
 // 📸 Upload Payment Proof
-router.post("/upload-proof", verifyToken, upload.single("screenshot"), async (req, res) => {
-  try {
-    const { amount } = req.body;
+router.post(
+  "/upload-proof",
+  verifyToken,
+  upload.single("screenshot"),
+  async (req, res) => {
+    try {
+      const { amount } = req.body;
 
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "Screenshot is required." });
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Screenshot is required." });
+      }
+
+      const proof = new PaymentProof({
+        userId: req.user.id,
+        amount,
+        screenshotUrl: req.file.path,
+        status: "Pending",
+      });
+
+      await proof.save();
+
+      res.json({
+        success: true,
+        message: "Screenshot uploaded successfully.",
+        screenshotUrl: req.file.path,
+      });
+    } catch (err) {
+      console.error("Upload Proof Error:", err);
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to upload screenshot." });
     }
-
-    const proof = new PaymentProof({
-      userId: req.user.id,
-      amount,
-      screenshotUrl: req.file.path,
-      status: "Pending",
-    });
-
-    await proof.save();
-
-    res.json({
-      success: true,
-      message: "Screenshot uploaded successfully.",
-      screenshotUrl: req.file.path,
-    });
-  } catch (err) {
-    console.error("Upload Proof Error:", err);
-    res.status(500).json({ success: false, message: "Failed to upload screenshot." });
   }
-});
+);
 module.exports = router;

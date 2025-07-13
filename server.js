@@ -33,7 +33,9 @@ app.get("/", (req, res) => {
 
 // Routes
 const authRoutes = require("./routes/auth");
+const adminRoutes = require("./routes/admin"); 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes); 
 
 // 🔁 Cron job for daily income
 cron.schedule("0 0 * * *", async () => {

@@ -31,6 +31,10 @@ app.get("/", (req, res) => {
   res.send("✅ Bright India API is running on Render!");
 });
 
+app.get("/ping", (req, res) => {
+  res.send("OK");
+});
+
 // Routes
 const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);

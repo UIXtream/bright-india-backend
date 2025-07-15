@@ -421,4 +421,7 @@ router.get("/activation-date", verifyToken, async (req, res) => {
   }
 });
 
+// GET: Get Payment Proofs
+const user = await User.findById(userId).select("-password");
+res.json({ ...user.toObject(), notifications: user.notifications });
 module.exports = router;

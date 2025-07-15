@@ -16,7 +16,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["user", "admin"],
     default: "user"
-  }
+  },
+
+  // ✅ Add this notifications array
+  notifications: [
+    {
+      message: { type: String },
+      date: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

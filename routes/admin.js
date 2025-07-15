@@ -5,13 +5,14 @@ const PaymentProof = require("../models/PaymentProof");
 const Deposit = require("../models/Deposit");
 const verifyToken = require("../utils/authMiddleware");
 
-
 // Admin profile route
 // ✅ Fixed: Admin profile route
 router.get("/me", verifyToken, async (req, res) => {
   try {
     // 🔍 Ab poora admin object fetch kar rahe hain
-    const admin = await User.findById(req.user.id).select("name profilePic role");
+    const admin = await User.findById(req.user.id).select(
+      "name profilePic role"
+    );
 
     // ✅ Check admin role
     if (!admin || admin.role !== "admin") {
@@ -27,10 +28,11 @@ router.get("/me", verifyToken, async (req, res) => {
     });
   } catch (err) {
     console.error("Admin profile error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch admin profile" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch admin profile" });
   }
 });
-
 
 // 📦 Admin Stats Route
 router.get("/stats", verifyToken, async (req, res) => {
@@ -125,11 +127,15 @@ router.post("/approve-proof/:id", verifyToken, async (req, res) => {
   try {
     const proof = await PaymentProof.findById(req.params.id).populate("userId");
     if (!proof) {
-      return res.status(404).json({ success: false, message: "Proof not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Proof not found" });
     }
 
     if (proof.status === "Approved") {
-      return res.status(400).json({ success: false, message: "Already approved" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Already approved" });
     }
 
     // ✅ Update proof status
@@ -181,14 +187,46 @@ router.put("/changerole/:userId", verifyToken, async (req, res) => {
       user: {
         name: updated.name,
         email: updated.email,
-        role: updated.role
-      }
+        role: updated.role,
+      },
     });
   } catch (err) {
     console.error("Role change failed", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+// for payment proof screenshot rejection
+// POST /reject-proof/:id
+router.post("/reject-proof/:id", verifyToken, async (req, res) => {
+  try {
+    const proofId = req.params.id;
 
+    const proof = await PaymentProof.findById(proofId).populate("userId");
+
+    if (!proof)
+      return res
+        .status(404)
+        .json({ success: false, message: "Proof not found" });
+
+    proof.status = "Rejected";
+    await proof.save();
+
+    // ✅ Optional: Add message to user
+    if (proof.userId) {
+      proof.userId.notifications = proof.userId.notifications || [];
+      proof.userId.notifications.push({
+        message:
+          "Your payment was rejected. Reason: Fake or invalid screenshot.",
+        date: new Date(),
+      });
+      await proof.userId.save();
+    }
+
+    res.json({ success: true, message: "Proof rejected successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 module.exports = router;

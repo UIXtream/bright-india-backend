@@ -1,10 +1,11 @@
-const express = require("express");
+import express from "express";
+import multer from "multer";
+import { Readable } from "stream";
+import verifyToken from "../middleware/auth.js";
+import cloudinary from "../utils/cloudinary.js";
+import PaymentProof from "../models/PaymentProof.js";
+
 const router = express.Router();
-const multer = require("multer");
-const { Readable } = require("stream");
-const verifyToken = require("../middleware/auth");
-const cloudinary = require("../utils/cloudinary");
-const PaymentProof = require("../models/PaymentProof");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -16,7 +17,7 @@ router.post("/upload-proof", verifyToken, upload.single("screenshot"), async (re
 
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder: "paymentProofs", // 📁 Create this folder in Cloudinary
+        folder: "paymentProofs", // 📁 Cloudinary folder
       },
       async (error, result) => {
         if (error) {
@@ -49,4 +50,4 @@ router.post("/upload-proof", verifyToken, upload.single("screenshot"), async (re
   }
 });
 
-module.exports = router;
+export default router;

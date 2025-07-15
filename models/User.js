@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
   name: String,
@@ -17,14 +17,12 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "admin"],
     default: "user"
   },
-
-  // ✅ Add this notifications array
   notifications: [
     {
-      message: { type: String },
+      message: String,
       date: { type: Date, default: Date.now }
     }
   ]
 }, { timestamps: true });
 
-module.exports = mongoose.model("User", userSchema);
+export default mongoose.model("User", userSchema);

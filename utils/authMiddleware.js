@@ -1,5 +1,5 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // ✅ Needed for role check from DB
+import jwt from "jsonwebtoken";
+import User from "../models/User.js"; // ✅ Include `.js` extension in ESM
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -17,7 +17,7 @@ const verifyToken = async (req, res, next) => {
 
     req.user = {
       id: user._id,
-      role: user.role, // ✅ Attach accurate role
+      role: user.role,
     };
 
     next();
@@ -26,4 +26,4 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-module.exports = verifyToken;
+export default verifyToken;

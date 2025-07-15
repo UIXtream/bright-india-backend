@@ -1,16 +1,16 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const path = require("path");
-const fs = require("fs");
-const multer = require("multer");
-const User = require("../models/User");
-const verifyToken = require("../utils/authMiddleware");
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+import User from "../models/User.js";
+import verifyToken from "../utils/authMiddleware.js";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
 const router = express.Router();
-const Deposit = require("../models/Deposit");
-const PaymentProof = require("../models/PaymentProof");
+import Deposit from "../models/Deposit.js";
+import PaymentProof from "../models/PaymentProof.js";
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -422,6 +422,14 @@ router.get("/activation-date", verifyToken, async (req, res) => {
 });
 
 // GET: Get Payment Proofs
-const user = await User.findById(userId).select("-password");
-res.json({ ...user.toObject(), notifications: user.notifications });
-module.exports = router;
+router.get("/profile-with-notifications", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select("-password");
+    res.json({ ...user.toObject(), notifications: user.notifications });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+export default router;

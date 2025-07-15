@@ -1,10 +1,10 @@
-const express = require("express");
-const router = express.Router();
-const User = require("../models/User");
-const PaymentProof = require("../models/PaymentProof");
-const Deposit = require("../models/Deposit");
-const verifyToken = require("../utils/authMiddleware");
+import express from "express";
+import User from "../models/User.js";
+import PaymentProof from "../models/PaymentProof.js";
+import Deposit from "../models/Deposit.js";
+import verifyToken from "../utils/authMiddleware.js";
 
+const router = express.Router();
 // Admin profile route
 // ✅ Fixed: Admin profile route
 router.get("/me", verifyToken, async (req, res) => {
@@ -229,4 +229,4 @@ router.post("/reject-proof/:id", verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

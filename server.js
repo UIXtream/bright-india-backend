@@ -1,11 +1,14 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const helmet = require("helmet");
-const path = require("path");
-const cron = require("node-cron");
-const axios = require("axios");
+import helmet from "helmet";
+import path from "path";
+import cron from "node-cron";
+import axios from "axios";
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cors from "cors";
+
+import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js"; // ✅ Import only once
 
 dotenv.config();
 const app = express();
@@ -24,7 +27,7 @@ app.use(helmet());
 app.use(express.json());
 
 // Static uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(path.resolve(), "uploads"))); // ✅ Fixed __dirname for ES module
 
 // Health check
 app.get("/", (req, res) => {
@@ -36,10 +39,8 @@ app.get("/ping", (req, res) => {
 });
 
 // Routes
-const authRoutes = require("./routes/auth");
 app.use("/api/auth", authRoutes);
-const adminRoutes = require("./routes/admin"); 
-app.use("/api/admin", adminRoutes); 
+app.use("/api/admin", adminRoutes); // ✅ Use imported route
 
 // 🔁 Cron job for daily income
 cron.schedule("0 0 * * *", async () => {

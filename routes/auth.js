@@ -63,55 +63,44 @@ const upload = multer({ storage });
 //   }
 // });
 
-router.post("/signup", (req, res) => {
-  upload.single("profilePic")(req, res, async (err) => {
-    if (err) {
-      console.error("Image Upload Error:", err);
-      return res.status(400).json({ success: false, message: "Image upload failed." });
+router.post("/signup", upload.single("profilePic"), async (req, res) => {
+  try {
+    const { name, email, password, referredBy } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "All fields required." });
     }
 
-    try {
-      const { name, email, password, referredBy } = req.body;
-
-      if (!name || !email || !password) {
-        return res.status(400).json({ success: false, message: "All fields required." });
-      }
-
-      const userExist = await User.findOne({ email });
-      if (userExist) {
-        return res.status(400).json({ success: false, message: "Email already registered." });
-      }
-
-      let profilePicUrl = "";
-
-      if (req.file) {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: "bright-india-users",
-        });
-        profilePicUrl = result.secure_url;
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const role = email === "brightindia1983@gmail.com" ? "admin" : "user";
-
-      const user = new User({
-        name,
-        email,
-        password: hashedPassword,
-        profilePic: profilePicUrl,
-        referredBy: referredBy || null,
-        role,
-      });
-
-      await user.save();
-      res.status(201).json({ success: true, message: "Signup successful." });
-
-    } catch (err) {
-      console.error("Signup error:", err.message);
-      res.status(500).json({ success: false, message: "Internal Server Error" });
+    const userExist = await User.findOne({ email });
+    if (userExist) {
+      return res.status(400).json({ success: false, message: "Email already registered." });
     }
-  });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ✅ Multer with Cloudinary already uploaded, just use path
+    const profilePicUrl = req.file?.path || "";
+
+    const role = email === "brightindia1983@gmail.com" ? "admin" : "user";
+
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      profilePic: profilePicUrl,
+      referredBy: referredBy || null,
+      role,
+    });
+
+    await user.save();
+
+    res.status(201).json({ success: true, message: "Signup successful." });
+  } catch (err) {
+    console.error("Signup error:", err.message);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
 });
+
 
 // my team
 router.get("/team", verifyToken, async (req, res) => {

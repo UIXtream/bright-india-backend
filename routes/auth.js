@@ -44,7 +44,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePicUrl = req.file ? req.file.path : "";
 
-    const role = email === "naveenkumar123@gmail.com" ? "admin" : "user"; // ✅
+    const role = email === "brightindia1983@gmail.com" ? "admin" : "user"; // ✅
 
     const user = new User({
       name,
@@ -398,4 +398,27 @@ router.post(
     }
   }
 );
+
+
+// ✅ Get activation date (first deposit)
+router.get("/activation-date", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const firstDeposit = await Deposit.findOne({ userId, status: "Approved" }).sort({ createdAt: 1 });
+
+    if (!firstDeposit) {
+      return res.status(404).json({ success: false, message: "No deposits found." });
+    }
+
+    res.json({
+      success: true,
+      activationDate: firstDeposit.createdAt,
+    });
+  } catch (err) {
+    console.error("Activation date error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 module.exports = router;

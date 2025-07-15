@@ -248,8 +248,12 @@ router.post("/approve-proof/:id", verifyToken, async (req, res) => {
     if (proof.userId) {
       proof.userId.deposit += proof.amount;
 
+      // ✅ Clean old rejected notifications
+      proof.userId.notifications = (proof.userId.notifications || []).filter(
+        (note) => !note.message.toLowerCase().includes("rejected")
+      );
+
       // ✅ Add success notification
-      proof.userId.notifications = proof.userId.notifications || [];
       proof.userId.notifications.push({
         message: "Your payment has been approved successfully!",
         type: "success", // ✅ so frontend can style it green

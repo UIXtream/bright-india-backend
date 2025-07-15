@@ -228,5 +228,42 @@ router.post("/reject-proof/:id", verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+// POST /approve-proof/:id
+router.post("/approve-proof/:id", verifyToken, async (req, res) => {
+  try {
+    const proofId = req.params.id;
+
+    const proof = await PaymentProof.findById(proofId).populate("userId");
+    if (!proof) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Proof not found" });
+    }
+
+    // ✅ Update proof status
+    proof.status = "Approved";
+    await proof.save();
+
+    // ✅ Add deposit to user
+    if (proof.userId) {
+      proof.userId.deposit += proof.amount;
+
+      // ✅ Add success notification
+      proof.userId.notifications = proof.userId.notifications || [];
+      proof.userId.notifications.push({
+        message: "Your payment has been approved successfully!",
+        type: "success", // ✅ so frontend can style it green
+        date: new Date(),
+      });
+
+      await proof.userId.save();
+    }
+
+    res.json({ success: true, message: "Proof approved successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 export default router;

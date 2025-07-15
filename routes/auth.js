@@ -5,11 +5,11 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import User from "../models/User.js";
+import Deposit from "../models/Deposit.js";
 import verifyToken from "../utils/authMiddleware.js";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 const router = express.Router();
-import Deposit from "../models/Deposit.js";
 import PaymentProof from "../models/PaymentProof.js";
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -432,4 +432,16 @@ router.get("/profile-with-notifications", verifyToken, async (req, res) => {
   }
 });
 
+// auth.js ya alag wallet.js me
+
+
+router.get("/deposits", verifyToken, async (req, res) => {
+  try {
+    const deposits = await Deposit.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(deposits); // ✅ Send array of deposits
+  } catch (err) {
+    console.error("Deposit fetch error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch deposits" });
+  }
+});
 export default router;

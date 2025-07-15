@@ -155,5 +155,40 @@ router.post("/approve-proof/:id", verifyToken, async (req, res) => {
   }
 });
 
+// PUT /api/admin/changerole/:userId
+router.put("/changerole/:userId", verifyToken, async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+    if (currentUser.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const { newRole } = req.body;
+
+    if (!["admin", "user"].includes(newRole)) {
+      return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.params.userId,
+      { role: newRole },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: `Role updated to ${newRole}`,
+      user: {
+        name: updated.name,
+        email: updated.email,
+        role: updated.role
+      }
+    });
+  } catch (err) {
+    console.error("Role change failed", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 
 module.exports = router;

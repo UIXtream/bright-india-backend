@@ -76,7 +76,12 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     // ✅ Multer with Cloudinary already uploaded, just use path
     const profilePicUrl = req.file?.path || "";
 
-    const role = email === "brightindia1983@gmail.com" ? "admin" : "user";
+    // const role = email === "brightindia1983@gmail.com, naveenkumar123@gmail.com" ? "admin" : "user";
+    const adminEmails = [
+      "brightindia1983@gmail.com",
+      "naveenkumar123@gmail.com",
+    ];
+    const role = adminEmails.includes(email.trim()) ? "admin" : "user";
 
     const user = new User({
       name,

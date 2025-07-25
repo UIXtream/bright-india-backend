@@ -81,9 +81,8 @@ router.get("/users", verifyToken, async (req, res) => {
   }
 
   try {
-    const users = await User.find().select(
-      "name email createdAt role referredBy"
-    );
+   const users = await User.find().select("name email createdAt role referredBy deposit");
+
     res.json({ users });
   } catch (err) {
     res.status(500).json({ message: "Failed to load users" });

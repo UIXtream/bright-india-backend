@@ -29,51 +29,46 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 // ✅ Signup
-// router.post("/signup", upload.single("profilePic"), async (req, res) => {
-//   try {
-//     const { name, email, password, referredBy } = req.body;
-
-//     const userExist = await User.findOne({ email });
-//     if (userExist) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Email already registered." });
-//     }
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const profilePicUrl = req.file ? req.file.path : "";
-
-//     const role = email === "brightindia1983@gmail.com" ? "admin" : "user"; // ✅
-
-//     const user = new User({
-//       name,
-//       email,
-//       password: hashedPassword,
-//       profilePic: profilePicUrl,
-//       referredBy: referredBy || null,
-//       role, // ✅ Add role here
-//     });
-
-//     await user.save();
-
-//     res.status(201).json({ success: true, message: "Signup successful." });
-//   } catch (err) {
-//     console.error("Signup error:", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// });
-
 router.post("/signup", upload.single("profilePic"), async (req, res) => {
   try {
     const { name, email, password, referredBy } = req.body;
+    let finalReferrerId = referredBy;
+
+    // Step 1: If user has referredBy
+    if (referredBy) {
+      const directReferrals = await User.countDocuments({ referredBy });
+
+      // Step 2: Check if direct referrals >= 3
+      if (directReferrals >= 3) {
+        // Step 3: Auto-place logic (Breadth-First Search style)
+        const queue = [referredBy];
+        while (queue.length > 0) {
+          const current = queue.shift();
+          const children = await User.find({ referredBy: current });
+
+          if (children.length < 3) {
+            finalReferrerId = current;
+            break;
+          }
+
+          for (let child of children) {
+            queue.push(child._id.toString());
+          }
+        }
+      }
+    }
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: "All fields required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields required." });
     }
 
     const userExist = await User.findOne({ email });
     if (userExist) {
-      return res.status(400).json({ success: false, message: "Email already registered." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -88,7 +83,7 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
       email,
       password: hashedPassword,
       profilePic: profilePicUrl,
-      referredBy: referredBy || null,
+      referredBy: finalReferrerId || null,
       role,
     });
 
@@ -100,7 +95,6 @@ router.post("/signup", upload.single("profilePic"), async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
-
 
 // my team
 router.get("/team", verifyToken, async (req, res) => {
@@ -410,16 +404,20 @@ router.post(
   }
 );
 
-
 // ✅ Get activation date (first deposit)
 router.get("/activation-date", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const firstDeposit = await Deposit.findOne({ userId, status: "Approved" }).sort({ createdAt: 1 });
+    const firstDeposit = await Deposit.findOne({
+      userId,
+      status: "Approved",
+    }).sort({ createdAt: 1 });
 
     if (!firstDeposit) {
-      return res.status(404).json({ success: false, message: "No deposits found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "No deposits found." });
     }
 
     res.json({
@@ -445,14 +443,17 @@ router.get("/profile-with-notifications", verifyToken, async (req, res) => {
 
 // auth.js ya alag wallet.js me
 
-
 router.get("/deposits", verifyToken, async (req, res) => {
   try {
-    const deposits = await Deposit.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    const deposits = await Deposit.find({ userId: req.user.id }).sort({
+      createdAt: -1,
+    });
     res.json(deposits); // ✅ Send array of deposits
   } catch (err) {
     console.error("Deposit fetch error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch deposits" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch deposits" });
   }
 });
 export default router;
